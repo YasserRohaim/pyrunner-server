@@ -4,8 +4,10 @@ import pty
 import time
 import re
 import signal
-from fastapi import FastAPI
+from pydantic import BaseModel
 
+class FileDescriptor(BaseModel):
+    fd:int
 def check_for_errors(output):
     error_pattern = r"Traceback|Error|Exception"
 
@@ -16,7 +18,7 @@ def check_for_errors(output):
 class TimeoutException(Exception):
     pass
 
-def signal_handler(signum, frame):
+def signal_handler():
     """ Signal handler to raise TimeoutException """
     raise TimeoutException("Command execution exceeded time limit.")
 
@@ -55,7 +57,7 @@ def read_output(master):
     
     return output
 
-def send_command(process, master, command):
+def send_command(process:subprocess.Popen, master:int, command:str):
     """ Send a command to the Python subprocess and return the output,
       with a 2-second timeout and 100 MB memory limit """
     command = "import resource;resource.setrlimit(resource.RLIMIT_AS, (100 * 1024 * 1024, 100 * 1024 * 1024));" + command
@@ -93,11 +95,9 @@ def send_command(process, master, command):
 process, master = spawn_python_shell()
 
 # tests
-'''
 print(send_command(process, master, 'print("hi")'))  # Should print "hi"
 print(send_command(process, master, 'x=5'))  # Should be empty (variable assignment)
 print(send_command(process, master, 'print(x * 2)'))  
 print(send_command(process, master, '1/0'))  
 print(send_command(process,master,'x="c"*100*2**20'))
 print(send_command(process, master, 'import time;time.sleep(4)'))
-'''
